@@ -1,5 +1,8 @@
 import numpy as np
-  
+import asyncio
+
+amax = 100 #steht später im Worker
+
 def r_of_t(r_now, v_now, a_now, t):
     r_t = r_now + v_now*t + 0.5*a_now*(t**2)
     return r_t
@@ -25,12 +28,14 @@ def Dtca_vec (tca, r_self, r_enemy, v_self, v_enemy):
     return dtca
     
 
-def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):
+def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#TBD: check von V nach dem Manöver
     R_puck = 1.
     r_tca_self = r_of_t(r_self, v_self,np.array([0,0]), tca)
     r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
     r_tca = r_tca_enemy - r_tca_self
     res_acc = 2*(2*R_puck - r_tca)*(tca**(-2))
+    if np.linalg.norm(res_acc) > amax:
+        return amax
     return res_acc
 
 def danger_check(r_self, r_enemy, v_self, v_enemy):
@@ -51,6 +56,9 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
         r[0] = x_next
         r[1] = y_next
     return False
+
+#asyncio def set_acc(acc, time):
+    
         
     
     
@@ -60,3 +68,4 @@ a = np.array([12,24])
 b = np.array([1,12])
 c = np.array([-12,5])
 d = np.array([23-2])
+ 
