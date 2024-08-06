@@ -1,11 +1,10 @@
 import numpy as np
 import multiprocessing as MP
 import time
-import modules_JH
-import asyncio
 
   
 def worker_heiter(id, secret, q_request, q_reply):
+    import modules_JH
     #1. Initialisieren des Pucks und erfassen der Parameter
     q_request.put('SET_NAME', 'heiter', secret, id)
     q_request.put('GET_SIZE', id)
@@ -50,29 +49,36 @@ def worker_heiter(id, secret, q_request, q_reply):
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put('SET_ACCELERATION', 0, secret, id)
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
-            
-    while True:#dauernde checks
-        for i  in range(len(danger_list)):#check der gefährder, timing fehlt
-            q_request.put('GET_PUCK', danger_list[i[0]], id)
-            puck = q_reply.get()[1]
-            if puck.is_alive() == False:
-                continue
-            tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
-            if tca >= 10:
-                danger_list.remove[i]
-                continue
-            else:
-                if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
-                            puck.get_velocity()) < 1.1 * D:
-                    resacc = Res_acc(tca,me.get_position(), pucks(i[1]),\
-                                     me.get_velocity(),pucks(i[2]))
-                    q_request.put('SET_ACCELERATION', resacc, secret, id)
-                    #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
-                    q_request.put('SET_ACCELERATION', 0, secret, id)
-                    danger_list.remove[i] #den Puck für den ausgewichen wurde streichen
-                
-            
-            
-    #to do: 2 check loops: Für alle und für die Prios (time/threading/asyncio verwenden)
-    #auch: reflexion an rand checken
-    #geschwindigkeit nach Ausweichen checken und ggf. anderes Ausweichen       
+
+    while True:#dauerhafte checks der priorisierten pucks und aller anderen
+        prio_check()
+        time.sleep(5/50)
+        prio_check()
+        time.sleep(5/50)
+        rest_check()
+        time.sleep(5/50)
+
+        
+###############################################################################Ablage von vermutlich unnötigem                
+while True:#dauernde checks
+    for i  in range(len(danger_list)):#check der gefährder, timing fehlt
+        q_request.put('GET_PUCK', danger_list[i[0]], id)
+        puck = q_reply.get()[1]
+        if puck.is_alive() == False:
+            continue
+        tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
+        if tca >= 10:
+            danger_list.remove[i]
+            continue
+        else:
+            if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
+                        puck.get_velocity()) < 1.1 * D:
+                resacc = Res_acc(tca,me.get_position(), pucks(i[1]),\
+                                 me.get_velocity(),pucks(i[2]))
+                q_request.put('SET_ACCELERATION', resacc, secret, id)
+                #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
+                q_request.put('SET_ACCELERATION', 0, secret, id)
+                danger_list.remove[i] #den Puck für den ausgewichen wurde streichen          
+  
+#auch: reflexion an rand checken
+#geschwindigkeit nach Ausweichen checken und ggf. anderes Ausweichen       
