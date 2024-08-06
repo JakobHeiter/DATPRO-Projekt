@@ -1,5 +1,4 @@
 import numpy as np
-import asyncio
 
 vmax = 42.
 amax = 100 #steht später im Worker
@@ -63,7 +62,7 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
     return False
 
     
-def prio_check():
+def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret):#übergabe aller variablen als Args
     for i  in range(len(danger_list)):#check der gefährder, timing fehlt
         q_request.put('GET_PUCK', danger_list[i[0]], id)
         puck = q_reply.get()[1]
@@ -83,7 +82,7 @@ def prio_check():
                 q_request.put('SET_ACCELERATION', 0, secret, id)
                 danger_list.remove[i] #den Puck für den ausgewichen wurde streichen
                 
-def rest_check():
+def rest_check(pucks, me, danger_list, D, q_request, secret):
     for i in pucks:
         tca = Tca(me.get_position(),pucks(i[1]),me.get_velocity(),pucks(i[2]))
         if tca < (11/50):#random Zahl -> testen
