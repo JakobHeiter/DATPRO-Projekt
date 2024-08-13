@@ -72,6 +72,8 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
         #except q_reply.Empty:
         #    print("Keine Antwort in der Queue erhalten.")
         puck = q_reply.get()[1]
+        if type(puck) !='puck_server.Puck_Server' :#sicherstellen, dass nicht eine andere reply verwendet wird die noch da ist
+            continue
         if puck.is_alive() == False:
             continue
         tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
