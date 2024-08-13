@@ -77,8 +77,8 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret):#übergabe
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
                         puck.get_velocity()) < 1.1 * D:
-                resacc = Res_acc(tca,me.get_position(), pucks[i[1]],\
-                                 me.get_velocity(),pucks[i[2]])
+                resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
+                                 me.get_velocity(),pucks[i][2])
                 q_request.put('SET_ACCELERATION', resacc, secret, id)
                 #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put('SET_ACCELERATION', 0, secret, id)
@@ -86,13 +86,13 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret):#übergabe
                 
 def rest_check(pucks, me, danger_list, D, q_request, secret):
     for i in pucks:
-        tca = Tca(me.get_position(),pucks[i[1]],me.get_velocity(),pucks[i[2]])
+        tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < (11/50):#random Zahl -> testen
             danger_list.append(pucks[i])
-            if Dtca_abs(tca,me.get_position(), pucks[i[1]], me.get_velocity(),\
-                        pucks[i[2]]) < 1.1 * D:
-                resacc = Res_acc(tca,me.get_position(), pucks[i[1]],\
-                                 me.get_velocity(),pucks[i[2]])
+            if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
+                        pucks[i][2]) < 1.1 * D:
+                resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
+                                 me.get_velocity(),pucks[i][2])
                 q_request.put('SET_ACCELERATION', resacc, secret, id)
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put('SET_ACCELERATION', 0, secret, id)
@@ -131,16 +131,16 @@ def worker_heiter(id, secret, q_request, q_reply):
             continue
         p_list = [puck.get_id(), puck.get_position(), puck.get_velocity(), \
                   puck.get_acceleration(), puck.get_time(), puck.is_alive()]
-        pucks(i = p_list)
+        pucks[i] = p_list
         
     for i in range(len(pucks)):#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
-        tca = Tca(me.get_position(),pucks[i[1]],me.get_velocity(),pucks[i[2]])
+        tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < 2.5:#random Zahl -> testen
             danger_list.append(pucks(i))
-            if Dtca_abs(tca,me.get_position(), pucks[i[1]], me.get_velocity(),\
-                        pucks[i[2]]) < 1.1 * D:
-                resacc = Res_acc(tca,me.get_position(), pucks[i[1]],\
-                                 me.get_velocity(),pucks[i[2]])
+            if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
+                        pucks[i][2]) < 1.1 * D:
+                resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
+                                 me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, id))
                 q_request.put(('SET_ACCELERATION', 0, secret, id))
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
