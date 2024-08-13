@@ -30,13 +30,12 @@ def Dtca_vec (tca, r_self, r_enemy, v_self, v_enemy):
 
 def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#TBD: check von V nach dem Manöver
     R_puck = 1.
-    vel = v_self
     r_tca_self = r_of_t(r_self, v_self,np.array([0,0]), tca)
     r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
     r_tca = r_tca_enemy - r_tca_self
     res_acc = 2*(2*R_puck - r_tca)*(tca**(-2))
-    if vel+res_acc >= vmax:
-        max_acc = vmax-vel
+    if v_self+res_acc >= vmax:
+        max_acc = vmax-v_self
         return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
     if np.linalg.norm(res_acc) > amax:
         return amax
@@ -75,8 +74,8 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret):#übergabe
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
                         puck.get_velocity()) < 1.1 * D:
-                resacc = Res_acc(tca,me.get_position(), pucks(i[1]),\
-                                 me.get_velocity(),pucks(i[2]))
+                resacc = Res_acc(tca,me.get_position(), pucks[i[1]],\
+                                 me.get_velocity(),pucks[i[2]])
                 q_request.put('SET_ACCELERATION', resacc, secret, id)
                 #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put('SET_ACCELERATION', 0, secret, id)
@@ -84,13 +83,13 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret):#übergabe
                 
 def rest_check(pucks, me, danger_list, D, q_request, secret):
     for i in pucks:
-        tca = Tca(me.get_position(),pucks(i[1]),me.get_velocity(),pucks(i[2]))
+        tca = Tca(me.get_position(),pucks[i[1]],me.get_velocity(),pucks[i[2]])
         if tca < (11/50):#random Zahl -> testen
-            danger_list.append(pucks(i))
-            if Dtca_abs(tca,me.get_position(), pucks(i[1]), me.get_velocity(),\
-                        pucks(i[2])) < 1.1 * D:
-                resacc = Res_acc(tca,me.get_position(), pucks(i[1]),\
-                                 me.get_velocity(),pucks(i[2]))
+            danger_list.append(pucks(i))#richtige klammern?
+            if Dtca_abs(tca,me.get_position(), pucks[i[1]], me.get_velocity(),\
+                        pucks[i[2]]) < 1.1 * D:
+                resacc = Res_acc(tca,me.get_position(), pucks[i[1]],\
+                                 me.get_velocity(),pucks[i[2]])
                 q_request.put('SET_ACCELERATION', resacc, secret, id)
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put('SET_ACCELERATION', 0, secret, id)
