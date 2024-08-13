@@ -66,8 +66,8 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
     
 def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret):#übergabe aller variablen als Args
     for i  in range(len(danger_list)):#check der gefährder, timing fehlt
-        q_request.put('GET_PUCK', danger_list[i[0]], id)
-        puck = q_reply.get()[1]
+        q_request.put('GET_PUCK', danger_list[i][0], id)#HIER PROBLEM!(gewesen)
+        puck = q_reply.get()[1]              ######
         if puck.is_alive() == False:
             continue
         tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
@@ -94,7 +94,7 @@ def rest_check(pucks, me, danger_list, D, q_request, secret):
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put('SET_ACCELERATION', resacc, secret, id)
-                #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
+                #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
                 q_request.put('SET_ACCELERATION', 0, secret, id)
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen     
   
@@ -133,10 +133,10 @@ def worker_heiter(id, secret, q_request, q_reply):
                   puck.get_acceleration(), puck.get_time(), puck.is_alive()]
         pucks[i] = p_list
         
-    for i in range(len(pucks)):#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
+    for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < 2.5:#random Zahl -> testen
-            danger_list.append(pucks(i))
+            danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
                         pucks[i][2]) < 1.1 * D:
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
