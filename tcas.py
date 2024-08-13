@@ -102,33 +102,33 @@ def main():
 
 # Use structural pattern maching here to decode the requests
             match request:
-                case ('GET_SIZE', id):
+                case ('GET_SIZE', idd):
                     reply = ('GET_SIZE', n_workers)
 
-                case ('GET_BOX', id):
+                case ('GET_BOX', idd):
                     reply = ('GET_BOX', simbox)
 
-                case ('GET_PUCK', n_puck, id):
+                case ('GET_PUCK', n_puck, idd):
                     try:
                         puck = pucks[n_puck]
                     except IndexError:
                         puck = None
                     reply = ('GET_PUCK', puck)
 
-                case ('SET_NAME', name, scrt, id):
-                    if secrets.authenticate(scrt, id):
+                case ('SET_NAME', name, scrt, idd):
+                    if secrets.authenticate(scrt, idd):
                         if type(name) == str:
-                            pucks[id].set_name(name)
+                            pucks[idd].set_name(name)
                             reply = ('SET_NAME', name)
                         else:
                             reply = ('SET_NAME', None)
                     else:
                         print("authenication failed")
 
-                case ('SET_ACCELERATION', a, scrt, id):
-                    if secrets.authenticate(scrt, id):
+                case ('SET_ACCELERATION', a, scrt, idd):
+                    if secrets.authenticate(scrt, idd):
                         if np.linalg.norm(a) <= params.A_MAX:
-                            pucks[id].set_acceleration(a)
+                            pucks[idd].set_acceleration(a)
                             reply = ('SET_ACCELERATION', a)
                         else:
                             reply = ('SET_ACCELERATION', None)
@@ -141,7 +141,7 @@ def main():
                     continue
 
             if reply != None:
-                queues[id].put(reply)
+                queues[idd].put(reply)
             t = time.perf_counter() - t_offset
             if t > t_base + tick:
                 t_base += tick
@@ -203,7 +203,7 @@ def main():
 
     print(f"TCAS beendet nach {t = }")
     pygame.base.quit()
-    #exit()
+    exit()
 
 
 if __name__ == '__main__':
