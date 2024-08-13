@@ -54,7 +54,7 @@ def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#TBD: check von V nach dem 
     r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
     r_tca = r_tca_enemy - r_tca_self
     res_acc = 2*(2*R_puck - r_tca)*(tca**(-2))
-    if v_self+res_acc >= vmax:
+    if np.linalg.norm(v_self+res_acc) >= vmax:
         max_acc = vmax-v_self
         return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
     if np.linalg.norm(res_acc) > amax:
@@ -82,18 +82,23 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
 
     
 def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übergabe aller variablen als Args
-    for i  in range(len(danger_list)-1):#check der gefährder, timing fehlt, -1 für keyError?
-        q_request.put(('GET_PUCK', danger_list[i][0], idd))
+    for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können (noch übertragen)
+       # print("Die danger list, die im prio check verwendet wird ist:", danger_list, " und hat die Länge", len(danger_list))
+       # print("im prio check ist i:", i)
+        q_request.put(('GET_PUCK', danger_list[i][0], idd))#i-1??
         #try:
         #    puck = q_reply.get(timeout=2)[1]  #vermeidet deadlock
         #except q_reply.Empty:
         #    print("Keine Antwort in der Queue erhalten.")
         puck = q_reply.get()[1]
+       # print("der puck im prio check ist:", puck, "und ist vom typ", type(puck))
+        if type(puck) !='puck_server.Puck_Server' :#sicherstellen, dass nicht eine andere reply verwendet wird die noch da ist
+            continue
         if puck.is_alive() == False:
             continue
         tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
         if tca >= (11/50):
-            danger_list.remove[i]
+            danger_list.pop(i)#ganz gefährlich: indexverschiebung!
             continue
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
@@ -101,20 +106,23 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
+                print("!!AUSWEICHEN!!")
                 #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
-                danger_list.remove[i] #den Puck für den ausgewichen wurde streichen
+                danger_list.pop(i) #den Puck für den ausgewichen wurde streichen, siehe oben!
                 
 def rest_check(pucks, me, danger_list, D, q_request, secret, idd):
     for i in pucks:
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < (11/50):#random Zahl -> testen
-            danger_list.append(pucks[i])
+            if pucks[i] not in danger_list:#nur pucks in die Liste schreiben, die noch nicht drin sind! (geht das?)
+                danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
                         pucks[i][2]) < 1.1 * D:
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
+                print("!!AUSWEICHEN!!")
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen     
@@ -164,13 +172,14 @@ def worker_heiter(idd, secret, q_request, q_reply):
         
     for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
-        if tca < 2.5:#random Zahl -> testen
+        if tca < 1.5:#random Zahl -> testen, <2.5!
             danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
                         pucks[i][2]) < 1.1 * D:
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
+                print("!!AUSWEICHEN!!")
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
                 
