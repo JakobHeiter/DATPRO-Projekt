@@ -89,7 +89,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
                 acc_check = q_reply.get()[1]
-                if acc_check != resacc:
+                if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
@@ -108,7 +108,7 @@ def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
                 acc_check = q_reply.get()[1]
-                if acc_check != resacc:
+                if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
@@ -159,7 +159,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
                 acc_check = q_reply.get()[1]
-                if acc_check != resacc:
+                if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
