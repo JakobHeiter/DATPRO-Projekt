@@ -88,11 +88,14 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
+                acc_check = q_reply.get()[1]
+                if acc_check != resacc:
+                    raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(i) #den Puck für den ausgewichen wurde streichen
                 
-def rest_check(pucks, me, danger_list, D, q_request, secret, idd):
+def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
     for i in pucks:
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < 0:                                                             #wenn tca kleiner als 0 ist sie in der vergangenheit: ignorieren
@@ -104,6 +107,9 @@ def rest_check(pucks, me, danger_list, D, q_request, secret, idd):
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
+                acc_check = q_reply.get()[1]
+                if acc_check != resacc:
+                    raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen     
@@ -152,6 +158,9 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
+                acc_check = q_reply.get()[1]
+                if acc_check != resacc:
+                    raise ValueError('set acceleration is not same as the requested one!')
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
 
@@ -166,7 +175,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
         time.sleep(5/50)
         q_request.put(('GET_PUCK', me.get_id(), idd))
         me = q_reply.get()[1]
-        rest_check(pucks, me, danger_list, D, q_request, secret, idd)
+        rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
         time.sleep(5/50)
         if me.is_alive() == False:
             break
