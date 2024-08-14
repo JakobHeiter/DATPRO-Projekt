@@ -80,52 +80,76 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
         r[1] = y_next
     return False
 
+
+def update_me(q_request, q_reply, me, idd):
+        q_request.put(('GET_PUCK', me.get_id(), idd))
+        ich = q_reply.get()[1]
+        if not isinstance(me, puck_server.Puck_Server):
+            print(f'der falsche typ ist: {type(me)}')
+            q_reply.get()
+            return
+        return ich
+
     
-def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übergabe aller variablen als Args
-    for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können (noch übertragen)
-       # print("Die danger list, die im prio check verwendet wird ist:", danger_list, " und hat die Länge", len(danger_list))
-       # print("im prio check ist i:", i)
+def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#funktionieren nicht! immer die gleichen tca's werden berechnet
+    for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können
         q_request.put(('GET_PUCK', danger_list[i][0], idd))#i-1??
         #try:
         #    puck = q_reply.get(timeout=2)[1]  #vermeidet deadlock
         #except q_reply.Empty:
         #    print("Keine Antwort in der Queue erhalten.")
         puck = q_reply.get()[1]
-       # print("der puck im prio check ist:", puck, "und ist vom typ", type(puck))
-        if type(puck) !='puck_server.Puck_Server' :#sicherstellen, dass nicht eine andere reply verwendet wird die noch da ist
+        print(f'der puck im prio check ist:     {puck}')
+        if type(puck) != puck_server.Puck_Server:#sicherstellen, dass nicht eine andere reply verwendet wird die noch da ist
+            print(f'der falsche tzp im prio check ist: {type(puck)} und gehoert zu dem objekt {puck}')
             continue
         if puck.is_alive() == False:
             continue
-        tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
-        if tca >= (11/50):
+        tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())#gibt hoft einen type error, WIE KOMMEN DENN DA NOCH INTEGER HIN???
+        print(f"im prio check ist tca: {tca}")
+        if tca < 0:
+            continue
+        if tca >= (0.5):
             danger_list.pop(i)#ganz gefährlich: indexverschiebung!
             continue
         else:
-            if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
-                        puck.get_velocity()) < 1.1 * D:
+            if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),  #werte fuer me sind IMMER GLEICH, UPDATEN!
+                        puck.get_velocity()) < 1.3 * D:
+                print(f"Der abstand zwischen mir und {pucks[i][0]} ist zu klein! ({Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(), pucks[i][2])}) Berechne ausweichempfehlung")
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
-                print("!!AUSWEICHEN!!")
-                #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
+                print(f"!!AUSWEICHEN!!prio mit {resacc}")
+                acc_check = q_reply.get()[1]
+                if not np.array_equal(resacc, acc_check):
+                    raise ValueError('set acceleration is not same as the requested one!')
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
                 danger_list.pop(i) #den Puck für den ausgewichen wurde streichen, siehe oben!
+
                 
-def rest_check(pucks, me, danger_list, D, q_request, secret, idd):
+def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):#funktionieren nicht! immer die gleichen tca's werden berechnet
     for i in pucks:
-        tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
-        if tca < (11/50):#random Zahl -> testen
+        tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2]) # werte fuer me sind IMMER GLEICH, ME UPDATEN!
+        print(f"rest check tca = {tca}")
+        if tca < 0:
+            continue
+        if tca < (0.5):#random Zahl -> testen
             if pucks[i] not in danger_list:#nur pucks in die Liste schreiben, die noch nicht drin sind! (geht das?)
                 danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
-                        pucks[i][2]) < 1.1 * D:
+                        pucks[i][2]) < 1.3 * D:
+                print(f"Der abstand zwischen mir und {pucks[i][0]} ist zu klein! ({Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(), pucks[i][2])}) Berechne ausweichempfehlung")
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
-                print("!!AUSWEICHEN!!")
+                print(f"!!AUSWEICHEN!!rest mit {resacc}")
+                acc_check = q_reply.get()[1]
+                if not np.array_equal(resacc, acc_check):
+                    raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
-                danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen     
+                danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
+
  
 ##########################################################################################    
  
@@ -142,6 +166,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
     if nameok[1] == None:
         raise ValueError("Setting name failed")
     n_pucks = q_reply.get()[1]
+    print(f"n_pucks = {n_pucks}")
     simbox = q_reply.get()[1]#für Reflexionscheck
     box_xmin = simbox.xmin
     box_xmax = simbox.xmax
@@ -162,7 +187,8 @@ def worker_heiter(idd, secret, q_request, q_reply):
         if puck.is_alive() == False:
             continue
         if puck.get_name()== 'Jakob Heiter':
-            me = puck                #speichert mich gesondert als 'me' ab
+            me = puck
+            print(f"Ich bin abgespeichert: {puck.get_name()}")    #speichert mich gesondert als 'me' ab
             continue
         p_list = [puck.get_id(), puck.get_position(), puck.get_velocity(), \
                   puck.get_acceleration(), puck.get_time(), puck.is_alive()]
@@ -172,26 +198,38 @@ def worker_heiter(idd, secret, q_request, q_reply):
         
     for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
-        if tca < 1.5:#random Zahl -> testen, <2.5!
+        if tca < 0.5 :#random Zahl -> testen, <2.5!, wohl auch kleiner 1.5
             danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
-                        pucks[i][2]) < 1.1 * D:
+                        pucks[i][2]) < 1.3 * D:
+                print(f"Der abstand zwischen mir und {pucks[i][0]} ist zu klein! ({Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),pucks[i][2])}) Berechne ausweichempfehlung")
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
+                print(f"Ausweichbeschleunigung berechnet, sie ist {resacc}")
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
-                print("!!AUSWEICHEN!!")
+                acc_check = q_reply.get()[1]
+                if not np.array_equal(resacc, acc_check):
+                    raise ValueError('set acceleration is not same as the requested one!')
+                print(f"!!AUSWEICHEN!!1 mit {resacc}")
                 q_request.put(('SET_ACCELERATION', 0, secret, idd))
+                print("Acceleration reset")
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
+                print("Puck removed from danger list")
                 
     print("initial danger check done, danger_list:", danger_list , "entering continuous checks")
 
-    while True:#dauerhafte checks der priorisierten pucks und aller anderen
+    while True:#dauerhafte checks der priorisierten pucks und aller anderen,  me muss hier auch immer geupdatet werden!
+        me = update_me(q_request, q_reply, me, idd)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
         time.sleep(5/50)
+        me = update_me(q_request, q_reply, me, idd)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
         time.sleep(5/50)
-        rest_check(pucks, me, danger_list, D, q_request, secret, idd)
+        me = update_me(q_request, q_reply, me, idd)
+        rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
         time.sleep(5/50)
+        if me.is_alive() == False:
+            break
 
 ################################################################################################### 
 
@@ -396,7 +434,6 @@ def main():
     print(f"TCAS beendet nach {t = }")
     pygame.base.quit()
 #    exit()
-
 
 if __name__ == '__main__':
     main()
