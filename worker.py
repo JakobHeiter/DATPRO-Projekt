@@ -80,6 +80,8 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
         if tca >= (11/50):
             danger_list.pop(i)
             continue
+        if tca < 0:         #wenn tca <0 in der Vergangenhyeit, ignorieren
+            continue
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),\
                         puck.get_velocity()) < 1.1 * D:
@@ -93,6 +95,8 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
 def rest_check(pucks, me, danger_list, D, q_request, secret, idd):
     for i in pucks:
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
+        if tca < 0:                                                             #wenn tca kleiner als 0 ist sie in der vergangenheit: ignorieren
+            continue
         if tca < (11/50):#random Zahl -> testen
             danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
@@ -152,12 +156,20 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
 
     while True:#dauerhafte checks der priorisierten pucks und aller anderen
+        q_request.put(('GET_PUCK', me.get_id(), idd))
+        me = q_reply.get()[1]
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
         time.sleep(5/50)
+        q_request.put(('GET_PUCK', me.get_id(), idd))
+        me = q_reply.get()[1]
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
         time.sleep(5/50)
+        q_request.put(('GET_PUCK', me.get_id(), idd))
+        me = q_reply.get()[1]
         rest_check(pucks, me, danger_list, D, q_request, secret, idd)
         time.sleep(5/50)
+        if me.is_alive() == False:
+            break
 
 
 ###############################################################################Ablage von vermutlich unnötigem                
