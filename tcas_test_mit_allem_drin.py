@@ -105,6 +105,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#funk
             continue
         if puck.is_alive() == False:
             continue
+        print(f'AAAAAAAAAAAAA {puck}')
         tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())#gibt hoft einen type error, WIE KOMMEN DENN DA NOCH INTEGER HIN???
         print(f"im prio check ist tca: {tca}")
         if tca < 0:
@@ -115,7 +116,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#funk
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),  #werte fuer me sind IMMER GLEICH, UPDATEN!
                         puck.get_velocity()) < 1.3 * D:
-                print(f"Der abstand zwischen mir und {pucks[i][0]} ist zu klein! ({Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(), pucks[i][2])}) Berechne ausweichempfehlung")
+                print(f"Der abstand zwischen mir und {puck.get_id()} ist zu klein! ({Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(), pucks[i][2])}) Berechne ausweichempfehlung")
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
@@ -130,7 +131,6 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#funk
 def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):#funktionieren nicht! immer die gleichen tca's werden berechnet
     for i in pucks:
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2]) # werte fuer me sind IMMER GLEICH, ME UPDATEN!
-        print(f"rest check tca = {tca}")
         if tca < 0:
             continue
         if tca < (0.5):#random Zahl -> testen

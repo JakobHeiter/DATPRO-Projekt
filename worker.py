@@ -1,6 +1,7 @@
 import numpy as np
 import multiprocessing as MP
 import time
+import puck_server
 #import modules_JH
 
 vmax = 42.
@@ -63,6 +64,14 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
         r[1] = y_next
     return False
 
+def update_me(q_request, q_reply, me, idd):
+        q_request.put(('GET_PUCK', me.get_id(), idd))
+        me = q_reply.get()[1]
+        if not isinstance(me, puck_server.Puck_Server):
+            print(f'der falsche typ ist: {type(me)}')
+            q_reply.get()
+        return me
+
     
 def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übergabe aller variablen als Args
     for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können
@@ -72,7 +81,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
         #except q_reply.Empty:
         #    print("Keine Antwort in der Queue erhalten.")
         puck = q_reply.get()[1]
-        if type(puck) !='puck_server.Puck_Server' :#sicherstellen, dass nicht eine andere reply verwendet wird die noch da ist
+        if type(puck) != puck_server.Puck_Server :#sicherstellen, dass nicht eine andere reply verwendet wird die noch da ist
             continue
         if puck.is_alive() == False:
             continue
@@ -165,16 +174,13 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
 
     while True:#dauerhafte checks der priorisierten pucks und aller anderen
-        q_request.put(('GET_PUCK', me.get_id(), idd))
-        me = q_reply.get()[1]
+        me = update_me(q_request, q_reply, me, idd)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
         time.sleep(5/50)
-        q_request.put(('GET_PUCK', me.get_id(), idd))
-        me = q_reply.get()[1]
+        me = update_me(q_request, q_reply, me, idd)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
         time.sleep(5/50)
-        q_request.put(('GET_PUCK', me.get_id(), idd))
-        me = q_reply.get()[1]
+        me = update_me(q_request, q_reply, me, idd)
         rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
         time.sleep(5/50)
         if me.is_alive() == False:
