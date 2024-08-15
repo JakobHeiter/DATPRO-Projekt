@@ -45,9 +45,6 @@ def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#gibt die Ausweichbeschleun
     if np.linalg.norm(v_self+res_acc) <= vmin:
         min_acc = vmin + v_self
         return min_acc
-    if np.linalg.norm(v_self+res_acc) <= vmin:
-        min_acc = vmin + v_self
-        return min_acc
     if np.linalg.norm(res_acc) > amax:
         return amax
     return res_acc
