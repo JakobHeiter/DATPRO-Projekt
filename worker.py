@@ -76,6 +76,33 @@ def update_me(q_request, q_reply, me, idd):
             q_reply.get()
         return me
 
+
+def speed_check(q_reply, q_request, idd, me, secret):# passt noch gar nicht, siehe z.B. negative vektorkomponenten!!!
+    if np.linalg.norm(me.get_velocity()) <= 20:
+        acc = 2 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
+        q_request.put(('SET_ACCELERATION', acc, secret, idd))
+        print('STALL')
+        acc_check = q_reply.get()[1]
+        if not np.array_equal(acc, acc_check):
+            raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
+        time.sleep(10/50)
+        q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
+        acc_check = q_reply.get()[1]
+        if not np.array_equal(np.array([0,0]), acc_check):
+            raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
+    if np.linalg.norm(me.get_velocity()) >= 35:
+        acc = -2 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
+        q_request.put(('SET_ACCELERATION', acc, secret, idd))
+        print('OVERSPEED')
+        acc_check = q_reply.get()[1]
+        if not np.array_equal(acc, acc_check):
+            raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
+        time.sleep(10/50)
+        q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
+        if not np.array_equal(np.array[0,0], acc_check):
+            raise ValueError(f'acceleration mismatch! The replz was {acc_check}')   
+
+
     
 def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übergabe aller variablen als Args
     for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können
@@ -187,26 +214,21 @@ def worker_heiter(idd, secret, q_request, q_reply):
                     raise ValueError('set acceleration is not same as the requested one!')
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
 
-    while True:#dauerhafte checks der priorisierten pucks und aller anderen
+    while True:#dauerhafte checks
         me = update_me(q_request, q_reply, me, idd)
+        speed_check(q_reply, q_request, idd, me, secret)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
-        time.sleep(5/50)
+        time.sleep(3/50)
         me = update_me(q_request, q_reply, me, idd)
+        speed_check(q_reply, q_request, idd, me, secret)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
-        time.sleep(5/50)
+        time.sleep(3/50)
         me = update_me(q_request, q_reply, me, idd)
+        speed_check(q_reply, q_request, idd, me, secret)
         rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
-        time.sleep(5/50)
+        time.sleep(3/50)
         if me.is_alive() == False:
             break
-        if np.linalg.norm(me.get_velocity()) <= 15:
-            q_request.put(('SET_ACCELERATION', np.array([5,5], secret, idd)))
-            print("STALL, STALL, STALL")
-            time.sleep(3/50)
-            q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
-            acc_check = q_reply.get()[1]
-            if not np.array_equal(np.array([0,0]), acc_check):
-                raise ValueError('set acceleration is not same as the requested one!')
 
 
 ###############################################################################Ablage von vermutlich unnötigem                
