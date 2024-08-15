@@ -6,6 +6,7 @@ import puck_server
 
 vmax = 42.
 amax = 100 #steht später im Worker
+vmin = 10.
 
 def r_of_t(r_now, v_now, a_now, t):
     r_t = r_now + v_now*t + 0.5*a_now*(t**2)
@@ -32,7 +33,7 @@ def Dtca_vec (tca, r_self, r_enemy, v_self, v_enemy):
     return dtca
     
 
-def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#TBD: check von V nach dem Manöver
+def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#gibt die Ausweichbeschleunigung aus
     R_puck = 1.
     r_tca_self = r_of_t(r_self, v_self,np.array([0,0]), tca)
     r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
@@ -41,13 +42,19 @@ def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#TBD: check von V nach dem 
     if v_self+res_acc >= vmax:
         max_acc = vmax-v_self
         return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
+    if np.linalg.norm(v_self+res_acc) <= vmin:
+        min_acc = vmin + v_self
+        return min_acc
+    if np.linalg.norm(v_self+res_acc) <= vmin:
+        min_acc = vmin + v_self
+        return min_acc
     if np.linalg.norm(res_acc) > amax:
         return amax
     return res_acc
 
 def danger_check(r_self, r_enemy, v_self, v_enemy):
     tca = Tca(r_self, r_enemy, v_self, v_enemy)
-    if tca <= 2.0 and Dtca_abs(tca, r_self, r_enemy, v_self, v_enemy) <= 2.5:  #random Zeitwert. Einheit? Passt das? Testen
+    if tca <= 2.0 and Dtca_abs(tca, r_self, r_enemy, v_self, v_enemy) <= 2.5:
         return True
     else:
         return False
@@ -195,6 +202,14 @@ def worker_heiter(idd, secret, q_request, q_reply):
         time.sleep(5/50)
         if me.is_alive() == False:
             break
+        if np.linalg.norm(me.get_velocity()) <= 15:
+            q_request.put(('SET_ACCELERATION', np.array([5,5], secret, idd)))
+            print("STALL, STALL, STALL")
+            time.sleep(3/50)
+            q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
+            acc_check = q_reply.get()[1]
+            if not np.array_equal(np.array([0,0]), acc_check):
+                raise ValueError('set acceleration is not same as the requested one!')
 
 
 ###############################################################################Ablage von vermutlich unnötigem                
