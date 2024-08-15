@@ -101,7 +101,10 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
-                q_request.put(('SET_ACCELERATION', 0, secret, idd))
+                q_request.put(('SET_ACCELERATION', [0,0], secret, idd))
+                acc_check = q_reply.get()[1]
+                if not np.array_equal([0,0], acc_check):
+                    raise ValueError('set acceleration is not same as the requested one!')
                 danger_list.pop(i) #den Puck für den ausgewichen wurde streichen
                 
 def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
@@ -120,7 +123,10 @@ def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
                 #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
-                q_request.put(('SET_ACCELERATION', 0, secret, idd))
+                q_request.put(('SET_ACCELERATION', [0,0], secret, idd))
+                acc_check = q_reply.get()[1]
+                if not np.array_equal([0,0], acc_check):
+                    raise ValueError('set acceleration is not same as the requested one!')
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen     
   
 def worker_heiter(idd, secret, q_request, q_reply):
@@ -170,7 +176,10 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
-                q_request.put(('SET_ACCELERATION', 0, secret, idd))
+                q_request.put(('SET_ACCELERATION', [0,0], secret, idd))
+                acc_check = q_reply.get()[1]
+                if not np.array_equal([0,0], acc_check):
+                    raise ValueError('set acceleration is not same as the requested one!')
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
 
     while True:#dauerhafte checks der priorisierten pucks und aller anderen
