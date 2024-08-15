@@ -100,7 +100,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#übe
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
-                #time.sleep(2/50??) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
+                time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen -> threading, asyncio
                 q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(np.array([0,0]), acc_check):
@@ -122,7 +122,7 @@ def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
-                #time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
+                time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
                 q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(np.array([0,0]), acc_check):
@@ -176,6 +176,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('set acceleration is not same as the requested one!')
+                time.sleep(2/50)
                 q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(np.array([0,0]), acc_check):
