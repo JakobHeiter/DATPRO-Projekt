@@ -32,22 +32,32 @@ def Dtca_vec (tca, r_self, r_enemy, v_self, v_enemy):
             (v_enemy-v_self)))))
     return dtca
     
-
-def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#gibt die Ausweichbeschleunigung aus
+def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#Idee: als return ein Tupel geben, dann kann in den besonderen Situationen z.B. die Laufzeit angepasst werden
     R_puck = 1.
     r_tca_self = r_of_t(r_self, v_self,np.array([0,0]), tca)
     r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
     r_tca = r_tca_enemy - r_tca_self
     res_acc = 2*(2*R_puck - r_tca)*(tca**(-2))
-    if v_self+res_acc >= vmax:
-        max_acc = vmax-v_self
-        return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
-    if np.linalg.norm(v_self+res_acc) <= vmin:
-        min_acc = vmin + v_self
-        return min_acc
+    if np.linalg.norm(v_self + 10 * res_acc) <= vmin:
+        acc = 15 * (v_self/np.linalg.norm(v_self))
+        return acc
+    if np.linalg.norm(v_self + 10 * res_acc) >= vmax:
+        acc = -10 * (v_self/np.linalg.norm(v_self))
+        return acc
+    #if np.linalg.norm(v_self+ 10 * res_acc) >= vmax:#Bedenke: Laufzeit der Beschl. sind 10 frames            DAS IST KOMPLETTER QUATSCH HIER
+        #print("wird zu schnell")
+        #max_acc = (vmax-v_self)/11 #margin
+        #return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
+        #return np.array([2,2])
+    #if np.linalg.norm(v_self+ 10 * res_acc) <= vmin:#Laufzeit der BEschleunigung sind 10 Frames!
+        #print("wird zu langsam")
+        #min_acc = vmin + v_self
+        #return min_acc
+        #return np.array([2,2])
     if np.linalg.norm(res_acc) > amax:
         return amax
     return res_acc
+
 
 def danger_check(r_self, r_enemy, v_self, v_enemy):
     tca = Tca(r_self, r_enemy, v_self, v_enemy)
@@ -99,7 +109,8 @@ def speed_check(q_reply, q_request, idd, me, secret):# passt noch gar nicht, sie
             raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
         time.sleep(10/50)
         q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
-        if not np.array_equal(np.array[0,0], acc_check):
+        acc_check = q_reply.get()[1]
+        if not np.array_equal(np.array([0,0]), acc_check):
             raise ValueError(f'acceleration mismatch! The replz was {acc_check}')   
 
 

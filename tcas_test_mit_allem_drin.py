@@ -55,12 +55,22 @@ def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#Idee: als return ein Tupel
     r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
     r_tca = r_tca_enemy - r_tca_self
     res_acc = 2*(2*R_puck - r_tca)*(tca**(-2))
-    if np.linalg.norm(v_self+res_acc) >= vmax:
-        max_acc = vmax-v_self
-        return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
-    if np.linalg.norm(v_self+res_acc) <= vmin:
-        min_acc = vmin + v_self
-        return min_acc
+    if np.linalg.norm(v_self + 10 * res_acc) <= vmin:
+        acc = 15 * (v_self/np.linalg.norm(v_self))
+        return acc
+    if np.linalg.norm(v_self + 10 * res_acc) >= vmax:
+        acc = -10 * (v_self/np.linalg.norm(v_self))
+        return acc
+    #if np.linalg.norm(v_self+ 10 * res_acc) >= vmax:#Bedenke: Laufzeit der Beschl. sind 10 frames            DAS IST KOMPLETTER QUATSCH HIER
+        #print("wird zu schnell")
+        #max_acc = (vmax-v_self)/11 #margin
+        #return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
+        #return np.array([2,2])
+    #if np.linalg.norm(v_self+ 10 * res_acc) <= vmin:#Laufzeit der BEschleunigung sind 10 Frames!
+        #print("wird zu langsam")
+        #min_acc = vmin + v_self
+        #return min_acc
+        #return np.array([2,2])
     if np.linalg.norm(res_acc) > amax:
         return amax
     return res_acc
@@ -80,7 +90,7 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
             return x_next
         if y_next < box_y_min or y_next > box_y_max:
             return y_next
-        r[0] = x_next
+        r[0] = x_next 
         r[1] = y_next
     return False
 
@@ -94,9 +104,9 @@ def update_me(q_request, q_reply, me, idd):
             return
         return ich
 
-def speed_check(q_reply, q_request, idd, me, secret):# passt noch gar nicht, siehe z.B. negative vektorkomponenten!!!
+def speed_check(q_reply, q_request, idd, me, secret):
     if np.linalg.norm(me.get_velocity()) <= 20:
-        acc = 5 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
+        acc = 15 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
         q_request.put(('SET_ACCELERATION', acc, secret, idd))
         print('STALL')
         acc_check = q_reply.get()[1]
@@ -108,7 +118,7 @@ def speed_check(q_reply, q_request, idd, me, secret):# passt noch gar nicht, sie
         if not np.array_equal(np.array([0,0]), acc_check):
             raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
     if np.linalg.norm(me.get_velocity()) >= 35:
-        acc = -4 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
+        acc = -5 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
         q_request.put(('SET_ACCELERATION', acc, secret, idd))
         print('OVERSPEED')
         acc_check = q_reply.get()[1]
@@ -119,11 +129,12 @@ def speed_check(q_reply, q_request, idd, me, secret):# passt noch gar nicht, sie
         acc_check = q_reply.get()[1]
         if not np.array_equal(np.array([0,0]), acc_check):
             raise ValueError(f'acceleration mismatch! The replz was {acc_check}')   
+ 
 
     
 def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
     for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können
-        q_request.put(('GET_PUCK', danger_list[i][0], idd))#i-1??
+        q_request.put(('GET_PUCK', danger_list[i][0], idd))
         #try:
         #    puck = q_reply.get(timeout=2)[1]  #vermeidet deadlock
         #except q_reply.Empty:
@@ -136,14 +147,14 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
         tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
         if tca < 0:
             continue
-        if tca >= 1.5:
+        if tca >= 1.1:
             danger_list.pop(i)#ganz gefährlich: indexverschiebung!
             continue
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),  
-                        puck.get_velocity()) < 1.3 * D:
+                        puck.get_velocity()) < 1.2 * D:
                 resacc = Res_acc(tca,me.get_position(), pucks[i+1][1],\
-                                 me.get_velocity(),pucks[i+1][2])              #ist da beides mal das +1 legit?
+                                 me.get_velocity(),pucks[i+1][2])              #ist da beides mal das +1 legit? funktioniert anscheinend
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
                 print(f"!!AUSWEICHEN!!prio mit {resacc}")
                 acc_check = q_reply.get()[1]
@@ -162,7 +173,7 @@ def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):#grad
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < 0:#wenn tca<0: liegt in der Vergangenheit, egal!
             continue
-        if tca < 1.5:#random Zahl -> testen
+        if tca < 1.1:#random Zahl -> testen
             if pucks[i] not in danger_list:
                 danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
@@ -197,7 +208,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
     if nameok[1] == None:
         raise ValueError("Setting name failed")
     n_pucks = q_reply.get()[1]
-    simbox = q_reply.get()[1]#für Reflexionscheck
+    simbox = q_reply.get()[1]#für Reflexionscheck, tbd
     box_xmin = simbox.xmin
     box_xmax = simbox.xmax
     box_ymin = simbox.ymin
@@ -224,16 +235,14 @@ def worker_heiter(idd, secret, q_request, q_reply):
                   puck.get_acceleration(), puck.get_time(), puck.is_alive()]
         pucks[i] = p_list
 
-    print("initial puck request sent, dict:" ,pucks)
-
-###queue clean bis hier###   
+    print("initial puck request sent, dict:" ,pucks)  
      
     for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
-        if tca < 1.5 :#random Zahl -> testen, <2.5!, wohl auch kleiner 1.5
+        if tca < 1.3:
             danger_list.append(pucks[i])
             if Dtca_abs(tca,me.get_position(), pucks[i][1], me.get_velocity(),\
-                        pucks[i][2]) < 1.2 * D:
+                        pucks[i][2]) < 1.1* D:
                 resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
                                  me.get_velocity(),pucks[i][2])
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
@@ -254,18 +263,19 @@ def worker_heiter(idd, secret, q_request, q_reply):
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
-        time.sleep(3/50)
+        time.sleep(2/50)
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
-        time.sleep(3/50)
+        time.sleep(2/50)
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
         rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
-        time.sleep(3/50)
-        print(me.get_fuel())
+        time.sleep(2/50)
         if me.is_alive() == False:
             break
+        if me.get_fuel() < 20:
+            print("FUEL LOW!")
 
 
 ################################################################################################### 
@@ -312,7 +322,7 @@ def main():
 # In diese Liste können Sie zum Testen mehrere Instanzen Ihres
 # Workers einfügen. Jeder Worker kontrolliert einen Puck, es werden
 # soviele Pucks erzeugt, wie es Worker gibt.
-    workers = [ worker_heiter, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker]
+    workers = [ worker_heiter, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker, dummy_worker]
     n_workers = len(workers)
     queues = [ manager.Queue() for i in range(n_workers)]
     secrets = secret.Secret(n_workers)
@@ -472,5 +482,9 @@ def main():
     pygame.base.quit()
 #    exit()
 
-if __name__ == '__main__':
-    main()
+
+
+
+for i in range(20):
+    if __name__ == '__main__':
+        main()
