@@ -44,18 +44,8 @@ def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):#Idee: als return ein Tupel
     if np.linalg.norm(v_self + 10 * res_acc) >= vmax:
         acc = -10 * (v_self/np.linalg.norm(v_self))
         return acc
-    #if np.linalg.norm(v_self+ 10 * res_acc) >= vmax:#Bedenke: Laufzeit der Beschl. sind 10 frames            DAS IST KOMPLETTER QUATSCH HIER
-        #print("wird zu schnell")
-        #max_acc = (vmax-v_self)/11 #margin
-        #return max_acc #dann für länger laufen lassen! Check im Programm dazu einbauen!
-        #return np.array([2,2])
-    #if np.linalg.norm(v_self+ 10 * res_acc) <= vmin:#Laufzeit der BEschleunigung sind 10 Frames!
-        #print("wird zu langsam")
-        #min_acc = vmin + v_self
-        #return min_acc
-        #return np.array([2,2])
     if np.linalg.norm(res_acc) > amax:
-        return amax
+        return (res_acc/np.linalg.norm(res_acc))*(amax-5)
     return res_acc
 
 
