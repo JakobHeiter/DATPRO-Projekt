@@ -61,10 +61,10 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
         x_next = r[0]+v[0]
         y_next = r[1]+v[1]
         if x_next<box_x_min or x_next > box_x_max:
-            return x_next
-        if y_next < box_y_min or y_next > box_y_max:
-            return y_next
-        r[0] = x_next
+            return (x_next, x_next - v[0]) # gibt den naechsten Wert aussserhalb sowie den letzten Wert vor der Kollision zurueck
+        if y_next < box_y_min or y_next > box_y_max: #Ab dem zweiten wert kann man dann die respektive Geschwindigkeitskomponente umkehren um weiter zu rechnen
+            return (y_next, y_next - v[1])
+        r[0] = x_next 
         r[1] = y_next
     return False
 

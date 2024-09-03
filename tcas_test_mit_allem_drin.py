@@ -77,9 +77,9 @@ def check_rebound(r,v,box_x_min, box_x_max, box_y_min, box_y_max, steps):
         x_next = r[0]+v[0]
         y_next = r[1]+v[1]
         if x_next<box_x_min or x_next > box_x_max:
-            return x_next
-        if y_next < box_y_min or y_next > box_y_max:
-            return y_next
+            return (x_next, x_next - v[0]) # gibt den (naechsten Wert aussserhalb sowie den) letzten Wert vor der Kollision zurueck
+        if y_next < box_y_min or y_next > box_y_max: #Ab dem zweiten wert kann man dann die respektive Geschwindigkeitskomponente umkehren um weiter zu rechnen
+            return (y_next, y_next - v[1])
         r[0] = x_next 
         r[1] = y_next
     return False
@@ -96,19 +96,19 @@ def update_me(q_request, q_reply, me, idd):
 
 def speed_check(q_reply, q_request, idd, me, secret):
     if np.linalg.norm(me.get_velocity()) <= 20:
-        acc = 15 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
+        acc = 20 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
         q_request.put(('SET_ACCELERATION', acc, secret, idd))
         print('STALL')
         acc_check = q_reply.get()[1]
         if not np.array_equal(acc, acc_check):
-            raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
+            raise ValueError(f'acceleration mismatch! The reply was {acc_check}')
         time.sleep(10/50)
         q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
         acc_check = q_reply.get()[1]
         if not np.array_equal(np.array([0,0]), acc_check):
             raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
     if np.linalg.norm(me.get_velocity()) >= 35:
-        acc = -5 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
+        acc = -10 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
         q_request.put(('SET_ACCELERATION', acc, secret, idd))
         print('OVERSPEED')
         acc_check = q_reply.get()[1]
@@ -143,8 +143,8 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
         else:
             if Dtca_abs(tca,me.get_position(), puck.get_position(), me.get_velocity(),  
                         puck.get_velocity()) < 1.2 * D:
-                resacc = Res_acc(tca,me.get_position(), pucks[i+1][1],\
-                                 me.get_velocity(),pucks[i+1][2])              #ist da beides mal das +1 legit? funktioniert anscheinend
+                resacc = Res_acc(tca,me.get_position(), pucks[i][1],\
+                                 me.get_velocity(),pucks[i][2])              #ist da beides mal das +1 legit? funktioniert anscheinend
                 q_request.put(('SET_ACCELERATION', resacc, secret, idd))
                 print(f"!!AUSWEICHEN!!prio mit {resacc}")
                 acc_check = q_reply.get()[1]
@@ -192,8 +192,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
     q_request.put(('GET_SIZE', idd))
     q_request.put(('GET_BOX', idd))
     
-    print("initial requests sent")
-    
     nameok = q_reply.get()
     if nameok[1] == None:
         raise ValueError("Setting name failed")
@@ -204,13 +202,10 @@ def worker_heiter(idd, secret, q_request, q_reply):
     box_ymin = simbox.ymin
     box_ymax = simbox.ymax
     
-    print("box received")
-    
     pucks = dict()#Zentrales Verzeichnis der Pucks
     danger_list = []#verzeichnis der Intruder
     D = 2 #Durchmesser der Pucks
     
-    print("danger_list and dicitionary set up")
         
     for i in range(n_pucks):#initiale Abfrage aller Pucks zu beginn der Sim.
         q_request.put(('GET_PUCK', i,idd))
@@ -218,14 +213,11 @@ def worker_heiter(idd, secret, q_request, q_reply):
         if puck.is_alive() == False:
             continue
         if puck.get_name()== 'Jakob Heiter':
-            me = puck
-            print(f"Ich bin abgespeichert: {puck.get_name()}")    #speichert mich gesondert als 'me' ab
+            me = puck   #speichert mich gesondert als 'me' ab
             continue
         p_list = [puck.get_id(), puck.get_position(), puck.get_velocity(), \
                   puck.get_acceleration(), puck.get_time(), puck.is_alive()]
-        pucks[i] = p_list
-
-    print("initial puck request sent, dict:" ,pucks)  
+        pucks[i] = p_list 
      
     for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
@@ -246,22 +238,20 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 if not np.array_equal(np.array([0,0]), acc_check):
                     raise ValueError('acceleration mismatch!')
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
-                
-    print("initial danger check done, danger_list:", danger_list , "entering continuous checks")
 
     while True:#dauerhafte checks
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
-        time.sleep(2/50)
+        time.sleep(1/50)
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
         prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
-        time.sleep(2/50)
+        time.sleep(1/50)
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
         rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
-        time.sleep(2/50)
+        time.sleep(1/50)
         if me.is_alive() == False:
             break
         if me.get_fuel() < 20:
