@@ -130,6 +130,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
             continue
         tca = Tca(me.get_position(),puck.get_position(),me.get_velocity(),puck.get_velocity())
         if tca < 0:
+            danger_list.pop(i)
             continue
         if tca >= 1.1:
             danger_list.pop(i)
@@ -155,7 +156,7 @@ def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
 def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
     for i in pucks:
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
-        if tca < 0:#wenn tca<0: liegt in der Vergangenheit, egal!
+        if tca < 0:
             continue
         if tca < 1.1:#random Zahl -> testen
             if pucks[i] not in danger_list:
