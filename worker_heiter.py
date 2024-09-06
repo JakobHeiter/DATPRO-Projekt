@@ -15,7 +15,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
         return r_t
   
     def Tca(r_self, r_enemy, v_self, v_enemy):
-    
         tca = -1*((np.dot((r_enemy - r_self),(v_enemy - v_self)))/(np.dot((v_enemy- v_self),(v_enemy - v_self))))
         return tca
 
@@ -23,12 +22,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
         dtca = np.linalg.norm((r_enemy- r_self)- ((v_enemy- v_self)*(np.dot(\
         (r_enemy-r_self),(v_enemy-v_self)))/(np.dot((v_enemy-v_self),\
         (v_enemy-v_self)))))
-        return dtca
-
-    def Dtca_vec( r_self, r_enemy, v_self, v_enemy):
-        dtca = ((r_enemy- r_self)- ((v_enemy- v_self)*np.dot(\
-                (r_enemy-r_self),(v_enemy-v_self))/(np.dot((v_enemy-v_self),\
-                (v_enemy-v_self)))))
         return dtca
     
 
@@ -57,7 +50,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 return
             return ich
 
-    def speed_check(q_reply, q_request, idd, me, secret):
+    def speed_check(q_reply, q_request, idd, me, secret):#Checkt ob der puck zu schnelll/langsam wird und beschleunigt dann entsprechend
         if np.linalg.norm(me.get_velocity()) <= 20:
             acc = 40 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
             q_request.put(('SET_ACCELERATION', acc, secret, idd))
@@ -83,7 +76,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
  
 
     
-    def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
+    def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):#checkt alle Pucks auf der danger_list, entfernt irrelevante pucks und weicht ggf aus
         for i  in reversed(range(len(danger_list))):
             q_request.put(('GET_PUCK', danger_list[i][0], idd))
             puck = q_reply.get()[1]
@@ -116,7 +109,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                     danger_list.pop(i) #den Puck für den ausgewichen wurde streichen
 
                 
-    def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):
+    def rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply):#checkt alle Pucks im dictionary, setzt gefaehrder auf die danger_list und weicht ggf aus
         for i in pucks:
             tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
             if tca < 0:
@@ -132,7 +125,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                     acc_check = q_reply.get()[1]
                     if not np.array_equal(resacc, acc_check):
                         raise ValueError('acceleration mismatch!')
-                    time.sleep(2/50) #-> dann kann man halt in der Zeit nichts anderes machen
+                    time.sleep(2/50)
                     q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
                     acc_check = q_reply.get()[1]
                     if not np.array_equal(np.array([0,0]), acc_check):
@@ -167,7 +160,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                   puck.get_acceleration(), puck.get_time(), puck.is_alive()]
         pucks[i] = p_list 
      
-    for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list
+    for i in pucks:#Prüft welche Pucks gefährlich werden könnten und setzt diese auf die danger_list, bei Kollisionsgefahr wird ausgewichen
         tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
         if tca < 1.5:
             danger_list.append(pucks[i])
@@ -179,7 +172,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 acc_check = q_reply.get()[1]
                 if not np.array_equal(resacc, acc_check):
                     raise ValueError('acceleration mismatch!')
-                print(f"!!AUSWEICHEN!!1 mit {resacc}")
                 time.sleep(2/50)
                 q_request.put(('SET_ACCELERATION', np.array([0,0]), secret, idd))
                 acc_check = q_reply.get()[1]
