@@ -19,21 +19,20 @@ def worker_heiter(idd, secret, q_request, q_reply):
         tca = -1*((np.dot((r_enemy - r_self),(v_enemy - v_self)))/(np.dot((v_enemy- v_self),(v_enemy - v_self))))
         return tca
 
-    def Dtca_abs ( r_self, r_enemy, v_self, v_enemy):
-    
+    def Dtca_abs( r_self, r_enemy, v_self, v_enemy):
         dtca = np.linalg.norm((r_enemy- r_self)- ((v_enemy- v_self)*(np.dot(\
         (r_enemy-r_self),(v_enemy-v_self)))/(np.dot((v_enemy-v_self),\
         (v_enemy-v_self)))))
         return dtca
 
-    def Dtca_vec ( r_self, r_enemy, v_self, v_enemy):
+    def Dtca_vec( r_self, r_enemy, v_self, v_enemy):
         dtca = ((r_enemy- r_self)- ((v_enemy- v_self)*np.dot(\
                 (r_enemy-r_self),(v_enemy-v_self))/(np.dot((v_enemy-v_self),\
                 (v_enemy-v_self)))))
         return dtca
     
 
-    def Res_acc (tca,  r_self, r_enemy, v_self, v_enemy):
+    def Res_acc(tca,  r_self, r_enemy, v_self, v_enemy):
         R_puck = 1.
         r_tca_self = r_of_t(r_self, v_self,np.array([0,0]), tca)
         r_tca_enemy = r_of_t(r_enemy, v_enemy, np.array([0,0]), tca)
@@ -62,7 +61,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
         if np.linalg.norm(me.get_velocity()) <= 20:
             acc = 40 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
             q_request.put(('SET_ACCELERATION', acc, secret, idd))
-            print('STALL')
             acc_check = q_reply.get()[1]
             if not np.array_equal(acc, acc_check):
                 raise ValueError(f'acceleration mismatch! The reply was {acc_check}')
@@ -74,7 +72,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
         if np.linalg.norm(me.get_velocity()) >= 35:
             acc = -30 * (me.get_velocity()/np.linalg.norm(me.get_velocity()))
             q_request.put(('SET_ACCELERATION', acc, secret, idd))
-            print('OVERSPEED')
             acc_check = q_reply.get()[1]
             if not np.array_equal(acc, acc_check):
                 raise ValueError(f'acceleration mismatch! The replz was {acc_check}')
@@ -87,7 +84,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
 
     
     def prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd):
-        for i  in reversed(range(len(danger_list))):#check der gefährder, reversed um poppen zu können
+        for i  in reversed(range(len(danger_list))):
             q_request.put(('GET_PUCK', danger_list[i][0], idd))
             puck = q_reply.get()[1]
             if type(puck) != puck_server.Puck_Server:
@@ -108,7 +105,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
                     resacc = 3 * Res_acc(tca,me.get_position(), pucks[i+1][1],\
                                      me.get_velocity(),pucks[i+1][2])           
                     q_request.put(('SET_ACCELERATION', resacc, secret, idd))
-                    print(f"!!AUSWEICHEN!!prio mit {resacc}")
                     acc_check = q_reply.get()[1]
                     if not np.array_equal(resacc, acc_check):
                         raise ValueError('acceleration mismatch!')
@@ -125,7 +121,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
             tca = Tca(me.get_position(),pucks[i][1],me.get_velocity(),pucks[i][2])
             if tca < 0:
                 continue
-            if tca < 1.1:#random Zahl -> testen
+            if tca < 1.3:
                 if pucks[i] not in danger_list:
                     danger_list.append(pucks[i])
                 if Dtca_abs(me.get_position(), pucks[i][1], me.get_velocity(),\
@@ -133,7 +129,6 @@ def worker_heiter(idd, secret, q_request, q_reply):
                     resacc = 3 * Res_acc(tca,me.get_position(), pucks[i][1],\
                                      me.get_velocity(),pucks[i][2])
                     q_request.put(('SET_ACCELERATION', resacc, secret, idd))
-                    print(f"!!AUSWEICHEN!!rest mit {resacc}")
                     acc_check = q_reply.get()[1]
                     if not np.array_equal(resacc, acc_check):
                         raise ValueError('acceleration mismatch!')
@@ -146,7 +141,7 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 
 #########################################################################################
 
-    #1. Initialisieren des Pucks und erfassen der Parameter
+    #Initialisieren des Pucks und erfassen der Parameter
     q_request.put(('SET_NAME', 'Jakob Heiter', secret, idd))
     q_request.put(('GET_SIZE', idd))
     
@@ -193,9 +188,9 @@ def worker_heiter(idd, secret, q_request, q_reply):
                 danger_list.pop(-1) #den Puck für den ausgewichen wurde streichen
 
     while True:#dauerhafte checks
-        me = update_me(q_request, q_reply, me, idd)
-        speed_check(q_reply, q_request, idd, me, secret)
-        prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)
+        me = update_me(q_request, q_reply, me, idd)     #Aktualisiert mich selbst um korrekte Berechnungen durchführen zu können
+        speed_check(q_reply, q_request, idd, me, secret)#erkennt das Risiko von overspeed und stall und beschleunigt/bremst ggf.
+        prio_check(danger_list, q_request, q_reply, me, D, pucks, secret, idd)#Kollisionscheck bei allen Pucks der danger_list
         time.sleep(1/50)
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
@@ -203,9 +198,5 @@ def worker_heiter(idd, secret, q_request, q_reply):
         time.sleep(1/50)
         me = update_me(q_request, q_reply, me, idd)
         speed_check(q_reply, q_request, idd, me, secret)
-        rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)
+        rest_check(pucks, me, danger_list, D, q_request, secret, idd, q_reply)#Kollisionscheck für alle pucks, aktualisieren der danger_list
         time.sleep(1/50)
-        if me.is_alive() == False:
-            break
-        if me.get_fuel() < 20:
-            print("FUEL LOW!")
